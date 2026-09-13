@@ -14,7 +14,13 @@ app.use(express.json({ limit: "16kb" }));
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin) || isLocalhostOrigin(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.length === 0 ||
+        allowedOrigins.includes(origin) ||
+        isLocalhostOrigin(origin) ||
+        isExpoHostedOrigin(origin)
+      ) {
         callback(null, true);
         return;
       }
@@ -29,6 +35,16 @@ function isLocalhostOrigin(origin: string) {
     const url = new URL(origin);
 
     return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
+function isExpoHostedOrigin(origin: string) {
+  try {
+    const url = new URL(origin);
+
+    return url.protocol === "https:" && url.hostname.endsWith(".expo.app");
   } catch {
     return false;
   }
