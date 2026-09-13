@@ -1,10 +1,10 @@
 {
   "expo": {
     "name": "スキマ診療",
-    "slug": "スキマ診療",
+    "slug": "campus-med-timer",
     "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "スキマ診療",
+    "scheme": "campus-med-timer",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
