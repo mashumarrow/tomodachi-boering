@@ -61,6 +61,38 @@ npm run backend:typecheck
 npm test
 ```
 
+## Render Freeでバックエンドをデプロイ
+
+このリポジトリには `render.yaml` を用意しています。RenderのBlueprintから無料Web Serviceを作成できます。
+
+1. GitHubにこのリポジトリをpushします。
+2. Renderで `New` → `Blueprint` を選びます。
+3. このリポジトリを接続します。
+4. Planが `Free` になっていることを確認します。
+5. 環境変数を設定します。
+
+```bash
+GEMINI_API_KEY=取得したGemini APIキー
+GEMINI_MODEL=gemini-3.5-flash
+ALLOWED_ORIGINS=https://フロントエンドのデプロイURL
+```
+
+Renderのデプロイが完了すると、バックエンドURLが発行されます。
+
+```bash
+https://campus-med-timer-backend.onrender.com
+```
+
+実際のURLをExpo側の環境変数に設定して、フロントエンドを再ビルド・再デプロイします。
+
+```bash
+EXPO_PUBLIC_API_BASE_URL=https://Renderで発行されたURL
+npx expo export --platform web
+eas deploy
+```
+
+Render FreeのWeb Serviceは15分ほどアクセスがないとスリープします。次回アクセス時は起動まで少し時間がかかります。
+
 ## 実装内容
 
 - 宮崎大学 木花キャンパス、または端末の現在地を出発地として設定
