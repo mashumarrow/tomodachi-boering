@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "スキマ診療",
+    "slug": "campus-med-timer",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "campus-med-timer",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "現在地から周辺の医療機関と移動時間を見積もるために使用します。"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#f3f0e8"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router"],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ff9dae30-7b39-4172-be75-97ff782c42b0"
+      }
+    }
+  }
+}
