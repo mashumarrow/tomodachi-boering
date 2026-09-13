@@ -5,7 +5,7 @@ import { formatMinutes, formatSignedMinutes, formatYen, formatYenRange } from "@
 import { useSimulation } from "@/hooks/useSimulation";
 
 export default function ReservationScreen() {
-  const { hospital, simulation, symptomEstimate, reserve } = useSimulation();
+  const { hospital, simulation, symptomEstimate, symptomEstimateSource, reserve } = useSimulation();
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -22,6 +22,9 @@ export default function ReservationScreen() {
 
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>症状見積もり</Text>
+        <Text style={styles.badge}>
+          {symptomEstimateSource === "gemini" ? "Gemini APIによる見積もり" : "ローカル推定による見積もり"}
+        </Text>
         <Text style={styles.text}>{symptomEstimate.diagnosis}</Text>
         <Text style={styles.muted}>{symptomEstimate.tests}</Text>
         <Text style={styles.price}>概算自己負担 {formatYenRange(simulation.estimatedCostRange)}</Text>
@@ -94,6 +97,16 @@ const styles = StyleSheet.create({
     color: "#376996",
     fontSize: 18,
     fontWeight: "900"
+  },
+  badge: {
+    alignSelf: "flex-start",
+    borderRadius: 6,
+    backgroundColor: "#e6f4ef",
+    color: "#1d6f5d",
+    fontSize: 12,
+    fontWeight: "900",
+    paddingHorizontal: 8,
+    paddingVertical: 5
   },
   button: {
     minHeight: 52,

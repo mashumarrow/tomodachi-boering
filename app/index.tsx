@@ -2,28 +2,47 @@ import * as Location from "expo-location";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { MetricCard } from "@/components/MetricCard";
 import { OsmMap } from "@/components/OsmMap";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { Timeline } from "@/components/Timeline";
-import { fallbackHospitals, fetchNearbyHospitals, filterHospitalsByDepartment } from "@/api/mockApi";
+import {
+  fallbackHospitals,
+  fetchNearbyHospitals,
+  filterHospitalsByDepartment,
+} from "@/api/mockApi";
 import { origins } from "@/data/campus";
 import { medicalDepartmentOptions } from "@/data/medicalDepartments";
 import type { MedicalDepartment, Origin, TransportMode } from "@/domain/types";
-import { formatMinutes, formatSignedMinutes, formatYen, formatYenRange } from "@/lib/format";
+import {
+  formatMinutes,
+  formatSignedMinutes,
+  formatYen,
+  formatYenRange,
+} from "@/lib/format";
 import { useSimulation } from "@/hooks/useSimulation";
 
 const transportOptions: Array<{ label: string; value: TransportMode }> = [
   { label: "自転車", value: "bike" },
   { label: "徒歩", value: "walk" },
   { label: "自動車・原付", value: "car" },
-  { label: "路線バス", value: "bus" }
+  { label: "路線バス", value: "bus" },
 ];
 
 export default function HomeScreen() {
-  const [locationMessage, setLocationMessage] = useState("初期位置は宮崎大学 木花キャンパスです。");
-  const [selectedDepartment, setSelectedDepartment] = useState<MedicalDepartment>("all");
+  const [locationMessage, setLocationMessage] = useState("");
+  const [selectedDepartment, setSelectedDepartment] =
+    useState<MedicalDepartment>("all");
+  const [showTimeline, setShowTimeline] = useState(false);
   const {
     origin,
     transportMode,
@@ -32,32 +51,52 @@ export default function HomeScreen() {
     needsPharmacy,
     hospital,
     symptomEstimate,
+    symptomEstimateSource,
+    isEstimatingSymptoms,
+    symptomEstimateError,
+    canEstimateSymptomsWithAi,
+    estimateSymptomsWithAi,
     simulation,
     setOrigin,
     setHospital,
     setTransportMode,
     setAvailableMinutes,
     setSymptoms,
-    setNeedsPharmacy
+    setNeedsPharmacy,
   } = useSimulation();
 
   const nearbyHospitalsQuery = useQuery({
-    queryKey: ["nearby-hospitals", origin.coordinates.latitude, origin.coordinates.longitude],
+    queryKey: [
+      "nearby-hospitals",
+      origin.coordinates.latitude,
+      origin.coordinates.longitude,
+    ],
     queryFn: () => fetchNearbyHospitals(origin.coordinates),
     staleTime: 1000 * 60 * 10,
-    retry: 1
+    retry: 1,
   });
-  const allHospitalCandidates = nearbyHospitalsQuery.data ?? fallbackHospitals(origin.coordinates);
-  const hospitalCandidates = filterHospitalsByDepartment(allHospitalCandidates, selectedDepartment);
+  const allHospitalCandidates =
+    nearbyHospitalsQuery.data ?? fallbackHospitals(origin.coordinates);
+  const hospitalCandidates = filterHospitalsByDepartment(
+    allHospitalCandidates,
+    selectedDepartment,
+  );
 
   useEffect(() => {
-    if (hospitalCandidates.length > 0 && !hospitalCandidates.some((item) => item.id === hospital.id)) {
+    if (
+      hospitalCandidates.length > 0 &&
+      !hospitalCandidates.some((item) => item.id === hospital.id)
+    ) {
       setHospital(hospitalCandidates[0]);
     }
   }, [hospital.id, hospitalCandidates, setHospital]);
 
   const statusColor =
-    simulation.fit === "ok" ? "#28836f" : simulation.fit === "tight" ? "#f0a13a" : "#c95064";
+    simulation.fit === "ok"
+      ? "#28836f"
+      : simulation.fit === "tight"
+        ? "#f0a13a"
+        : "#c95064";
   const statusTitle =
     simulation.fit === "ok"
       ? "この空き時間で受診できる見込みです"
@@ -70,33 +109,39 @@ export default function HomeScreen() {
       const servicesEnabled = await Location.hasServicesEnabledAsync();
 
       if (!servicesEnabled) {
-        setLocationMessage("端末またはブラウザの位置情報サービスがオフです。設定から位置情報を有効にしてください。");
+        setLocationMessage(
+          "端末またはブラウザの位置情報サービスがオフです。設定から位置情報を有効にしてください。",
+        );
         return;
       }
 
       const permission = await Location.requestForegroundPermissionsAsync();
 
       if (permission.status !== "granted") {
-        setLocationMessage("現在地の利用が許可されませんでした。ブラウザまたはExpo Goの位置情報権限を許可してください。");
+        setLocationMessage(
+          "現在地の利用が許可されませんでした。ブラウザまたはExpo Goの位置情報権限を許可してください。",
+        );
         return;
       }
 
       const current =
         (await Location.getLastKnownPositionAsync()) ??
         (await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced
+          accuracy: Location.Accuracy.Balanced,
         }));
       const currentOrigin: Origin = {
         id: "current_location",
         name: "現在地",
         coordinates: {
           latitude: current.coords.latitude,
-          longitude: current.coords.longitude
-        }
+          longitude: current.coords.longitude,
+        },
       };
 
       setOrigin(currentOrigin);
-      setLocationMessage("現在地を出発地に設定しました。周辺の医療機関を再取得しています。");
+      setLocationMessage(
+        "現在地を出発地に設定しました。周辺の医療機関を再取得しています。",
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : "不明なエラー";
       setLocationMessage(`現在地を取得できませんでした: ${message}`);
@@ -111,11 +156,8 @@ export default function HomeScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.hero}>
-        <Text style={styles.eyebrow}>Campus Med-Timer</Text>
+        <Text style={styles.eyebrow}>スキマ診療</Text>
         <Text style={styles.title}>現在地から受診できる病院を探す</Text>
-        <Text style={styles.lede}>
-          宮崎大学周辺を起点に、現在地、OpenStreetMapの医療機関、移動時間、待ち時間、診察、薬局受け取りをまとめて見積もります。
-        </Text>
       </View>
 
       <View style={styles.section}>
@@ -125,7 +167,8 @@ export default function HomeScreen() {
             <Text style={styles.label}>現在の出発地</Text>
             <Text style={styles.originName}>{origin.name}</Text>
             <Text style={styles.muted}>
-              {origin.coordinates.latitude.toFixed(5)}, {origin.coordinates.longitude.toFixed(5)}
+              {origin.coordinates.latitude.toFixed(5)},{" "}
+              {origin.coordinates.longitude.toFixed(5)}
             </Text>
           </View>
           <View style={styles.originActions}>
@@ -133,10 +176,18 @@ export default function HomeScreen() {
               <Text style={styles.buttonText}>現在地を使う</Text>
             </Pressable>
             <Pressable
-              style={StyleSheet.flatten([styles.button, styles.secondaryButton])}
+              style={StyleSheet.flatten([
+                styles.button,
+                styles.secondaryButton,
+              ])}
               onPress={resetToMiyazakiUniversity}
             >
-              <Text style={StyleSheet.flatten([styles.buttonText, styles.secondaryButtonText])}>
+              <Text
+                style={StyleSheet.flatten([
+                  styles.buttonText,
+                  styles.secondaryButtonText,
+                ])}
+              >
                 宮崎大学に戻す
               </Text>
             </Pressable>
@@ -147,21 +198,25 @@ export default function HomeScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>周辺の医療機関</Text>
-        <Text style={styles.muted}>
-          OpenStreetMapから半径8kmの病院・クリニック・診療所を取得します。取得できない場合は宮崎大学周辺の候補を表示します。
-        </Text>
+
         <SegmentedControl
           label="診療科"
           options={medicalDepartmentOptions}
           value={selectedDepartment}
           onChange={setSelectedDepartment}
         />
-        {nearbyHospitalsQuery.isFetching ? <Text style={styles.loading}>周辺医療機関を取得中...</Text> : null}
+        {nearbyHospitalsQuery.isFetching ? (
+          <Text style={styles.loading}>周辺医療機関を取得中...</Text>
+        ) : null}
         {nearbyHospitalsQuery.isError ? (
-          <Text style={styles.warning}>OpenStreetMapから取得できなかったため、フォールバック候補を表示しています。</Text>
+          <Text style={styles.warning}>
+            OpenStreetMapから取得できなかったため、フォールバック候補を表示しています。
+          </Text>
         ) : null}
         {hospitalCandidates.length === 0 ? (
-          <Text style={styles.warning}>この診療科の候補が周辺に見つかりませんでした。診療科を「すべて」に戻して確認してください。</Text>
+          <Text style={styles.warning}>
+            この診療科の候補が周辺に見つかりませんでした。診療科を「すべて」に戻して確認してください。
+          </Text>
         ) : null}
         <View style={styles.hospitalList}>
           {hospitalCandidates.map((item) => (
@@ -169,14 +224,16 @@ export default function HomeScreen() {
               key={item.id}
               style={StyleSheet.flatten([
                 styles.hospitalButton,
-                item.id === hospital.id && styles.selectedHospital
+                item.id === hospital.id && styles.selectedHospital,
               ])}
               onPress={() => setHospital(item)}
             >
               <View style={styles.hospitalHeader}>
                 <Text style={styles.hospitalName}>{item.name}</Text>
                 <Text style={styles.distance}>
-                  {item.distanceMeters ? `${(item.distanceMeters / 1000).toFixed(1)}km` : "距離計算中"}
+                  {item.distanceMeters
+                    ? `${(item.distanceMeters / 1000).toFixed(1)}km`
+                    : "距離計算中"}
                 </Text>
               </View>
               <Text style={styles.muted}>
@@ -198,7 +255,9 @@ export default function HomeScreen() {
           <TextInput
             keyboardType="number-pad"
             value={String(availableMinutes)}
-            onChangeText={(text) => setAvailableMinutes(Number(text.replace(/\D/g, "")) || 0)}
+            onChangeText={(text) =>
+              setAvailableMinutes(Number(text.replace(/\D/g, "")) || 0)
+            }
             style={styles.input}
           />
         </View>
@@ -223,6 +282,26 @@ export default function HomeScreen() {
             placeholderTextColor="#8a9692"
             style={[styles.input, styles.textarea]}
           />
+          <Pressable
+            style={StyleSheet.flatten([
+              styles.button,
+              (!canEstimateSymptomsWithAi || isEstimatingSymptoms) &&
+                styles.disabledButton,
+            ])}
+            onPress={() => estimateSymptomsWithAi()}
+            disabled={!canEstimateSymptomsWithAi || isEstimatingSymptoms}
+          >
+            <Text style={styles.buttonText}>
+              {isEstimatingSymptoms
+                ? "AIで見積もり中..."
+                : "AIでかかる時間と費用を出す"}
+            </Text>
+          </Pressable>
+          {!canEstimateSymptomsWithAi ? (
+            <Text style={styles.muted}>
+              症状を5文字以上入力するとAI見積もりを実行できます。
+            </Text>
+          ) : null}
         </View>
       </View>
 
@@ -234,14 +313,31 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.metrics}>
-        <MetricCard label="総所要時間" value={formatMinutes(simulation.totalMinutes)} />
+        <MetricCard
+          label="総所要時間"
+          value={formatMinutes(simulation.totalMinutes)}
+        />
         <MetricCard
           label="空き時間との差"
           value={formatSignedMinutes(simulation.marginMinutes)}
-          tone={simulation.fit === "over" ? "red" : simulation.fit === "tight" ? "orange" : "green"}
+          tone={
+            simulation.fit === "over"
+              ? "red"
+              : simulation.fit === "tight"
+                ? "orange"
+                : "green"
+          }
         />
-        <MetricCard label="概算自己負担" value={formatYenRange(simulation.estimatedCostRange)} tone="blue" />
-        <MetricCard label="予約時先払い" value={formatYen(simulation.depositYen)} tone="orange" />
+        <MetricCard
+          label="概算自己負担"
+          value={formatYenRange(simulation.estimatedCostRange)}
+          tone="blue"
+        />
+        <MetricCard
+          label="予約時先払い"
+          value={formatYen(simulation.depositYen)}
+          tone="orange"
+        />
       </View>
 
       <View style={styles.mapCard}>
@@ -253,10 +349,38 @@ export default function HomeScreen() {
         />
       </View>
 
-      <Timeline items={simulation.timeline} />
+      <View style={styles.detail}>
+        <Pressable
+          style={styles.accordionHeader}
+          onPress={() => setShowTimeline((current) => !current)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showTimeline }}
+        >
+          <View style={styles.accordionTitleBlock}>
+            <Text style={styles.detailTitle}>所要時間の内訳</Text>
+            <Text style={styles.muted}>
+              往路、待ち時間、診察、薬局、復路を確認
+            </Text>
+          </View>
+          <Text style={styles.chevron}>{showTimeline ? "▲" : "▼"}</Text>
+        </Pressable>
+        {showTimeline ? <Timeline items={simulation.timeline} /> : null}
+      </View>
 
       <View style={styles.detail}>
         <Text style={styles.detailTitle}>AI症状見積もり</Text>
+        <Text style={styles.aiBadge}>
+          {isEstimatingSymptoms
+            ? "バックエンド経由でGemini見積もり中"
+            : symptomEstimateSource === "gemini"
+              ? "Gemini APIによる見積もり"
+              : "ローカル推定による見積もり"}
+        </Text>
+        {symptomEstimateError ? (
+          <Text style={styles.warning}>
+            バックエンドAPIを使えなかったため、ローカル推定を表示しています。
+          </Text>
+        ) : null}
         <Text style={styles.detailText}>{symptomEstimate.diagnosis}</Text>
         <Text style={styles.muted}>{symptomEstimate.tests}</Text>
       </View>
@@ -264,13 +388,24 @@ export default function HomeScreen() {
       <View style={styles.detail}>
         <Text style={styles.detailTitle}>予約・事前決済</Text>
         <Text style={styles.detailText}>
-          予約確定時に{formatYen(simulation.depositYen)}を先払いします。受診後の窓口精算は
+          予約確定時に{formatYen(simulation.depositYen)}
+          を先払いします。受診後の窓口精算は
           {formatYenRange(simulation.remainingPaymentRange)}程度です。
         </Text>
         <View style={styles.actions}>
           <Link href={`/hospitals/${hospital.id}`} asChild>
-            <Pressable style={StyleSheet.flatten([styles.button, styles.secondaryButton])}>
-              <Text style={StyleSheet.flatten([styles.buttonText, styles.secondaryButtonText])}>
+            <Pressable
+              style={StyleSheet.flatten([
+                styles.button,
+                styles.secondaryButton,
+              ])}
+            >
+              <Text
+                style={StyleSheet.flatten([
+                  styles.buttonText,
+                  styles.secondaryButtonText,
+                ])}
+              >
                 病院詳細
               </Text>
             </Pressable>
@@ -294,27 +429,27 @@ const styles = StyleSheet.create({
   container: {
     gap: 14,
     padding: 16,
-    paddingBottom: 36
+    paddingBottom: 36,
   },
   hero: {
     gap: 10,
-    paddingVertical: 8
+    paddingVertical: 8,
   },
   eyebrow: {
     color: "#28836f",
     fontSize: 12,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   title: {
     color: "#25302d",
     fontSize: 34,
     fontWeight: "900",
-    lineHeight: 40
+    lineHeight: 40,
   },
   lede: {
     color: "#64706d",
     fontSize: 15,
-    lineHeight: 25
+    lineHeight: 25,
   },
   section: {
     gap: 16,
@@ -322,12 +457,12 @@ const styles = StyleSheet.create({
     borderColor: "#d9ddd6",
     borderRadius: 8,
     backgroundColor: "#fffdf8",
-    padding: 14
+    padding: 14,
   },
   sectionTitle: {
     color: "#25302d",
     fontSize: 18,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   originPanel: {
     gap: 12,
@@ -335,23 +470,23 @@ const styles = StyleSheet.create({
     borderColor: "#d9ddd6",
     borderRadius: 8,
     backgroundColor: "#ffffff",
-    padding: 12
+    padding: 12,
   },
   originText: {
-    gap: 4
+    gap: 4,
   },
   originName: {
     color: "#25302d",
     fontSize: 20,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   originActions: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10
+    gap: 10,
   },
   hospitalList: {
-    gap: 8
+    gap: 8,
   },
   hospitalButton: {
     gap: 8,
@@ -359,36 +494,36 @@ const styles = StyleSheet.create({
     borderColor: "#d9ddd6",
     borderRadius: 8,
     backgroundColor: "#ffffff",
-    padding: 12
+    padding: 12,
   },
   selectedHospital: {
     borderColor: "#28836f",
-    backgroundColor: "#e6f4ef"
+    backgroundColor: "#e6f4ef",
   },
   hospitalHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 10
+    gap: 10,
   },
   hospitalName: {
     flex: 1,
     color: "#25302d",
     fontSize: 16,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   distance: {
     color: "#376996",
     fontSize: 14,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   inputBlock: {
-    gap: 8
+    gap: 8,
   },
   label: {
     color: "#3d4946",
     fontSize: 13,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   input: {
     minHeight: 48,
@@ -398,11 +533,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     color: "#25302d",
     padding: 12,
-    fontSize: 16
+    fontSize: 16,
   },
   textarea: {
     minHeight: 118,
-    textAlignVertical: "top"
+    textAlignVertical: "top",
   },
   switchRow: {
     minHeight: 50,
@@ -413,34 +548,34 @@ const styles = StyleSheet.create({
     borderColor: "#d9ddd6",
     borderRadius: 6,
     backgroundColor: "#eef5f1",
-    paddingHorizontal: 12
+    paddingHorizontal: 12,
   },
   status: {
     borderRadius: 8,
-    padding: 14
+    padding: 14,
   },
   statusTitle: {
     color: "#ffffff",
     fontSize: 17,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   statusText: {
     marginTop: 4,
     color: "#ffffff",
     fontSize: 14,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   metrics: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10
+    gap: 10,
   },
   mapCard: {
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#d9ddd6",
     borderRadius: 8,
-    backgroundColor: "#f7f3ea"
+    backgroundColor: "#f7f3ea",
   },
   detail: {
     gap: 8,
@@ -448,39 +583,65 @@ const styles = StyleSheet.create({
     borderColor: "#d9ddd6",
     borderRadius: 8,
     backgroundColor: "#ffffff",
-    padding: 14
+    padding: 14,
+  },
+  accordionHeader: {
+    minHeight: 54,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  accordionTitleBlock: {
+    flex: 1,
+    gap: 3,
+  },
+  chevron: {
+    color: "#376996",
+    fontSize: 16,
+    fontWeight: "900",
   },
   detailTitle: {
     color: "#25302d",
     fontSize: 16,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   detailText: {
     color: "#25302d",
     fontSize: 15,
-    lineHeight: 25
+    lineHeight: 25,
   },
   muted: {
     color: "#64706d",
     fontSize: 14,
-    lineHeight: 23
+    lineHeight: 23,
   },
   loading: {
     color: "#376996",
     fontSize: 14,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   warning: {
     color: "#c95064",
     fontSize: 14,
     fontWeight: "800",
-    lineHeight: 22
+    lineHeight: 22,
+  },
+  aiBadge: {
+    alignSelf: "flex-start",
+    borderRadius: 6,
+    backgroundColor: "#e6f4ef",
+    color: "#1d6f5d",
+    fontSize: 12,
+    fontWeight: "900",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
   actions: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginTop: 6
+    marginTop: 6,
   },
   button: {
     minHeight: 48,
@@ -489,25 +650,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 6,
     backgroundColor: "#376996",
-    paddingHorizontal: 18
+    paddingHorizontal: 18,
   },
   secondaryButton: {
     borderWidth: 1,
     borderColor: "#376996",
-    backgroundColor: "#ffffff"
+    backgroundColor: "#ffffff",
+  },
+  disabledButton: {
+    backgroundColor: "#9aa4a1",
   },
   buttonText: {
     color: "#ffffff",
     fontSize: 15,
     fontWeight: "900",
-    textAlign: "center"
+    textAlign: "center",
   },
   secondaryButtonText: {
-    color: "#376996"
+    color: "#376996",
   },
   disclaimer: {
     color: "#64706d",
     fontSize: 12,
-    lineHeight: 20
-  }
+    lineHeight: 20,
+  },
 });

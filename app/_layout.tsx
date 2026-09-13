@@ -14,10 +14,10 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: "#f3f0e8" },
           headerStyle: { backgroundColor: "#fffdf8" },
           headerTintColor: "#25302d",
-          headerTitleStyle: { fontWeight: "900" }
+          headerTitleStyle: { fontWeight: "900" },
         }}
       >
-        <Stack.Screen name="index" options={{ title: "Campus Med-Timer" }} />
+        <Stack.Screen name="index" options={{ title: "スキマ診療" }} />
         <Stack.Screen name="hospitals/[id]" options={{ title: "病院詳細" }} />
         <Stack.Screen name="reservation" options={{ title: "予約確認" }} />
         <Stack.Screen name="payment" options={{ title: "事前決済" }} />
